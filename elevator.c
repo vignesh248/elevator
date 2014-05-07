@@ -7,16 +7,17 @@ static int doorOpenCount = 0;
 static int timeCounter = 0;
 short int currentFloor = 0;
 bool floors[5] = {false,false,false,false,false};
-bool direction = true; // current set direction
-                       // true = up
-                       // false = down
+bool direction = true;     // current set direction
+                           // true = up
+                           // false = down
 
-bool movement = false; // check if floors[] has any true states
-                       // true = elevator is going up or down
-                       // false = elevator is stopped
-bool doorOpen = false; // check if door is opened
-                       // true = door is open
-                       // false = door is closed
+bool movement = false;     // check if floors[] has any true states
+                           // true = elevator is going up or down
+                           // false = elevator is stopped
+                       
+bool doorOpen = false;     // check if door is opened
+                           // true = door is open
+                           // false = door is closed
 
 bool floorPressed = false; // check if current floor was pressed
                            // true = current floor was pressed (execute stuff)
