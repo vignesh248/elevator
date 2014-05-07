@@ -1,292 +1,275 @@
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <stdbool.h>
+#include<avr/io.h>
+#include<avr/interrupt.h>
+#include<stdbool.h>
+const int secondCount = 1000; //1 second
+const int doorOpenSecondCount = 2;
+static int doorOpenCount = 0;
+static int timeCounter = 0;
+short int currentFloor = 0;
+bool floors[5] = {false,false,false,false,false};
+bool direction = true; // current set direction
+                       // true = up
+                       // false = down
 
-//Function Headers
-void up(); //Timer 1
-void down(); //Timer 1
-void stop(); //Timer 1
-void open(); //Timer 2
-void close(); //Timer 2
-void checkUpDown(bool [], bool*, int);
-bool checkIfEmpty(bool []);
-void checkCurrentFloor(int, bool []);
+bool movement = false; // check if floors[] has any true states
+                       // true = elevator is going up or down
+                       // false = elevator is stopped
+bool doorOpen = false; // check if door is opened
+                       // true = door is open
+                       // false = door is closed
 
-//Function Variables
-bool up=true;
-bool floor[8] = {false, false, false, false, false, false, false, false};
-int currentfloor = 0;
+bool floorPressed = false; // check if current floor was pressed
+                           // true = current floor was pressed (execute stuff)
+                           // false = current floor was not pressed (continue program)
+void init(); 
+void up();
+void down();
+void stop();
+void open();
+void close();
+int checkForInput();
+bool checkMovement(bool []);
 
-
-//Functions
-void checkCurrentFloor(int thisfloor, bool floors[],bool direction)
+ISR(TIMER0_OVF_vect)
 {
-    if(floors[thisfloor] == true)
-    {
-        stop();
-        open();
-        close();
-        floor[thisfloor] = false;
-    }
-    else
-    {
-        if(direction)
-        {
-    
-    }
-}
+    TCNT0 = 131;
+    timeCounter++;
 
-bool checkIfEmpty(bool check[])
-{
-    for(int i = 0; i <= 7; i++)
+    if(timeCounter==secondCount) // 1 second has elapsed
     {
-        if(check[i] == true)
+        timeCounter = 0;
+        if(direction == true && movement == true) //elevator is going up
         {
-            return true;
-        }
-
-        else
-        {
-            return false;
-        }
-    }
-}
-
-void checkUpDown(bool check[], bool* direction, int currfloor)//only called when buffer is not empty
-{
-    if(*direction)
-    {
-        for(int i = currfloor; i <= 7; i++)
-        {
-            if(floor[i] == true)
+            if(currentFloor == 4) direction = false;
+            if(floors[currentFloor] == true)
             {
-                *direction = true
+                floors[currentFloor] = false;
+                floorPressed = true;
+                stop();
+                open();
+                doorOpen = true;
+            }
+            currentFloor = currentFloor + 1;
+        }
+
+        else if(direction == false && movement == true) //elevator is going down
+        {
+            if(currentFloor == 0) direction = true;
+            if(floors[currentFloor] == true)
+            {
+                floors[currentFloor] = false;
+                floorPressed = true;
+                stop();
+                open();
+                doorOpen = true;
+            }
+            currentFloor = currentFloor - 1;
+        }
+        else{;}
+
+        if(doorOpen = true)
+        {
+            if(doorOpenCount == doorOpenSecondCount)
+            {
+                close();
+                doorOpen = false;
+                floorPressed = false;
+                doorOpenCount = 0;
+            }
+
+            else if(doorOpenCount < doorOpenSecondCount)
+            {
+                doorOpenCount++;
+            }
+
+            else
+            {
+                doorOpenCount = 0;
             }
         }
     }
 
-    *direction = false;
-}
-
-void up(int* updatefloor)
-{
-    OCR1A = 1705;
-    counter = 0;
-    TCNT0 = 131;
-    loopcounter = 0;
-    updatefloor += 1;
-}
-
-void down(int* updatefloor)
-{
-    OCR1A = 1305;
-    counter = 0;
-    TCNT0 = 131;
-    loopcounter = 0;
-    updatefloor -= 1;
-}
-
-void stop()
-{
-    OCR1A = 1505;
+    else{;}
 }
 
 int main()
 {
+    int input = 0;
     init();
     while(1)
     {
-        checkForInput();
-        if(~checkIfEmpty())
+        movement = checkMovement(floors);
+        if(movement == false && (~floorPressed)) stop();
+        else if(movement == true && (~floorPressed))
         {
-            checkUpDown();
-            if(up)
+            if(direction == true) // current direction is up
             {
-                up();
+                for(int i = currentFloor; i < 5; i++)
+                {
+                    if(floors[i] == true)
+                    {
+                        up();
+                        break;
+                    }
+                    else
+                    {
+                        direction = false;
+                    }
+                }
+
             }
-            else
+
+            else                        //current direction is down
             {
-                down();
+                for(int i = currentFloor; i > -1; i--)
+                {
+                    if(floors[i] == true)
+                    {
+                        down();
+                        break;
+                    }
+                    else
+                    {
+                        direction = true;
+                    }
+                }		
             }
-            checkCurrentFloor();
         }
-        else
+        else{;}
+
+        input = checkForInput();
+        if(input != -1); //something valid was pressed
         {
-            stop();
+            if(floors[input] == false && input != currentFloor) floors[input] = true;
         }
     }
 }
 
+void up()
+{
+    OCR1A = 1700; //elevator goes up
+    OCR1B = 1000; //door stays closed
+}
 
+void down()
+{
+    OCR1A = 1300; //elevator goes down
+    OCR1B = 1000; //door stays closed
+}
+
+void stop()
+{
+    OCR1A = 1500; //elevator stops
+    OCR1B = 1000; //door stays closed
+}
+
+void open()
+{
+    OCR1A = 1500; //elevator stays still
+    OCR1B = 2000; //door opens
+}
+
+void close()
+{
+    OCR1A = 1500; //elevator stays still
+    OCR1B = 1000; //door closes
+}
 
 void init()
 {
-    //set port A as input for keypad
-    DDRA = 0x00;
-    //setting port B as outputs for LEDs
-    DDRB = 0xFF;
-    //initialize port B
-    PORTB = 0b00000000;
-    
-    DDRD = 0b00100000;        // set pin D.5 for output (OC1A)
-    
-    //setting up timer
-    TCCR0 = 0x02; //clock prescale = 8
+    //////////////////////////////
+    //  START OF TIMER 0 CONFIG //
+    //////////////////////////////
+
+    TCCR0 = 0x02; //clock prescale 8
     TIMSK = 0x01; //unmask overflow interrupt
-    TCNT0 = 131; //initialize timer to 131
-    
-    // WGM11:WGM10   = 10: with WGM13-WGM12 to select timer mode 1110
-    //                     Fast PWM, timer 1 runs from 0 to ICR1
-    // COM1A1:COM1A0 = 10: clear OC1A when compare match, set OC1A when 0
-    TCCR1A = 0b10000010; // compare match occurs timer = OCR1A
+    TCNT0 = 131;  //initialize timer to 131
+
+    ///////////////////////////
+    // END OF TIMER 0 CONFIG //
+    ///////////////////////////
+
+    //////////////////////////////
+    //  START OF TIMER 1 CONFIG //
+    //////////////////////////////
+
+    TCCR1A = 0b10100010; // compare match occurs timer = OCR1A
     TCCR1B = 0b00011001; // WGM13:WGM12=11; CS12:CS0=001: internal clock 1MHz, no prescaler
-    ICR1 = 21500;
-    OCR1A = 1505;
-    // enable interrupts
-    sei();
+
+    ICR1  = 21500;       // period of PWM signal
+    OCR1A = 1500;	     // high time of PWM for PD5 (controls duty cycle) controls up and down
+    OCR1B = 1000;        // high time of PWM for PD4 (controls duty cycle) controls open and close
+
+    ////////////////////////////
+    //  END OF TIMER 1 CONFIG //
+    ////////////////////////////	
+
+    ////////////////////////////
+    // START I/O PORTS CONFIG //
+    ////////////////////////////
+
+    DDRA = 0b00000000;  //port A = input for keypad
+    DDRB = 0b11111111;  //port B = outputs for LEDs
+    DDRD = 0b00110000;  //port D = enable output for PWM 
+    //PD5 = OC1A
+    //PD4 = OC1B
+    /////////////////////////////
+    // END OF I/O PORTS CONFIG //
+    /////////////////////////////
+
+    sei(); //enable interrupts
 }
 
-void checkForInput()
-{
-    int row = calculate_row();
-    int column = calculate_column();
-    int inputfloor = row|column;
-    int floorpressed = 0;
-    if(inputfloor == 0xFF)
-    {
-        return;
-    }
-    
-    else
-    {
-        if(testforzeros(inputfloor)==2)
-        {
-            floorpressed = checkFloor(inputfloor);
-            if((currentFloor < floorpressed) && upDown == false) //going up
-            {
-                floor[floorpressed-1] = true;     
-            }
-            
-            else if(currentFloor > floorpressed) && upDown == true) //going down
-            {
-                floor[floorpressed-1] = true;
-            }
-            
-            else
-            {
-                return;
-            }
-        }
-                
-    }       
-}
-    
-
-int calculate_row()
+int checkForInput()
 {
     DDRA = 0x0F;         //set four right-most bits to output, four left-most bits to input
     PORTA = 0x0F;        //setting all 1 to input bits, to determine row
     int row = PINA;      //read row value
     row &= 0xF0;         //mask lower four bits, to prevent error
-    return row;          //return row value
-}
 
-//Calculate column function
-int calculate_column()
-{
     DDRA = 0xF0;         //set four right-most bits to input, four left-most bits to output
     PORTA = 0xF0;        //setting all 1 to input bits, to determine column
     int column = PINA;   //read column value
     column &= 0x0F;      //mask upper four bits, to prevent error
-    return column;       //return column value
+
+    int userInput = row | column;
+
+    switch(userInput)
+    {
+        case 0x77: 			// 1
+            return 1;
+            break;
+
+        case 0x7B:			// 2
+            return 2;
+            break;
+
+        case 0x7D:			// 3
+            return 3;
+            break;
+
+        case 0xB7: 			// 4
+            return 4;
+            break;
+
+        case 0xBB: 			// 5
+            return 5;
+            break;
+
+        default: 
+            return -1;      // nothing was pressed or invalid.
+    }
 }
 
-//Checks if more than 1 button is being pressed.
-int testforzeros(int hold)
+bool checkMovement(bool floorcheck[])
 {
-    int numberofzeros = 0;
-    int test = hold;
-    for (int count = 0; count <= 7; count++)
+    for(int i = 0; i < 5 ; i++)
     {
-        if(((test>>count) & 0x01)==0)
+        if(floorcheck[i] == true)
         {
-            numberofzeros++;
+            return true;
         }
     }
-    return numberofzeros;
-}
 
-int checkFloor(int hold)
-{
-    switch(hold)
-    {
-        case 0x77:          // 1
-            return 1;
-        
-        case 0x7B:          // 2
-            return 2;
-        
-        case 0x7D:          // 3
-            return 3;
-            
-        case 0xB7:          // 4
-            return 4;
-
-        case 0xBB:          // 5
-            return 5;
-               
-        case 0xBD:          // 6
-            return 6;
-
-        case 0xD7:          // 7
-            return 7;
-        
-        case 0xDB:          // 8        
-            return 8;
-            
-        default: 
-            return -1;
-    }
-}
-
-void setFloorLED(int hold)
-{
-    switch(hold)
-    {
-        case 1:          // 1
-            PORTB = PORTB|0b00000001;
-            break;
-        
-        case 2:          // 2
-            PORTB = PORTB|0b00000010;
-            break;
-        
-        case 3:          // 3
-            PORTB = PORTB|0b00000100;
-            break;
-            
-        case 4:          // 4
-            PORTB = PORTB|0b00001000;
-            break;
-
-        case 5:          // 5
-            PORTB = PORTB|0b00010000;
-            break;
-            
-        case 6:          // 6
-            PORTB = PORTB|0b00100000;
-            break;
-b
-        case 7:          // 7
-            PORTB = PORTB|0b01000000;
-            break;
-        
-        case 8:          // 8        
-            PORTB = PORTB|0b10000000;
-            break;
-            
-        default: 
-            PORTB = PORTB;
-            break;
-    }
+    return false;
 }
