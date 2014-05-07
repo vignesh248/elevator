@@ -1,0 +1,301 @@
+ #define F_CPU 1000000UL  // 1 MHz
+ //#define F_CPU 14.7456E6
+ #include <util/delay.h>
+#include<avr/io.h>
+#include<avr/interrupt.h>
+#include<stdbool.h>
+
+
+//Function Headers
+void up(int, int); //Timer 1
+void down(); //Timer 1
+void stop(); //Timer 1
+void checkForInput();
+int checkUpDown();
+bool checkIfEmpty();
+int checkFloor(int);
+int testforzeros();
+int calculate_column();
+int calculate_row();
+void init();
+
+
+//Function Variables
+bool upDown = true;
+bool floors[8] = {false, false, false, false, false, false, false, false};
+int currentfloor = 0;
+//const unsigned int elevatorcounter = 2000;//CHANGE VALUE LATER;
+//const unsigned int doorcounter = 1000;
+
+//unsigned char button;
+int floordifference = 0;
+
+
+//Functions
+bool checkIfEmpty()
+{
+	for(int i = 0; i <= 7; i++)
+	{
+		if(floors[i] == true)
+		{
+			return true;
+		}
+
+		else
+		{
+			return false;
+		}
+	}
+}
+
+int checkUpDown()//only called when buffer is not empty
+{
+	if(upDown)
+	{
+		for(int i = currentfloor; i <= 7; i++)
+		{
+			if(floors[i] == true)
+			{
+				upDown = true;
+				return (i - currentfloor);
+			}
+		}
+	}
+	else
+	{
+		for(int i = currentfloor; i>=0; i--)
+		if(floors[i] == true)
+		{
+			return(currentfloor-i);
+		}
+	}
+}
+
+void up(int floordifference, int currentfloor)
+{
+	OCR1A = 1700;
+	OCR1B = 1000;
+   switch(floordifference)
+   {
+	   case 1: _delay_ms(2000);
+	   break;
+	   case 2: _delay_ms(4000);
+	   break;
+	   case 3: _delay_ms(6000);
+	   break;
+	   case 4: _delay_ms(8000);
+	   break;
+	   case 5: _delay_ms(10000);
+	   break;
+	   case 6: _delay_ms(12000);
+	   break;
+	   case 7: _delay_ms(14000);
+	   break;
+	   default: break;
+   }
+
+	OCR1A = 1500;
+	OCR1B = 2000;
+	currentfloor += floordifference;
+	floors[currentfloor-1] = false;
+	_delay_ms(1000);
+	OCR1B = 1000;
+	
+}
+
+void down(int floordifference, int currentfloor)
+{
+	OCR1A = 1700;
+	OCR1B = 1000;
+	switch(floordifference)
+	{
+		case 1: _delay_ms(2000);
+				break;
+		case 2: _delay_ms(4000);
+				break;
+		case 3: _delay_ms(6000);
+				break;
+		case 4: _delay_ms(8000);
+		break;
+		case 5: _delay_ms(10000);
+		break;
+		case 6: _delay_ms(12000);
+		break;
+		case 7: _delay_ms(14000);
+		break;
+		default: break;
+	}
+
+	OCR1A = 1500;
+	OCR1B = 2000;
+	currentfloor -= floordifference;
+	floors[currentfloor-1]=false;
+	_delay_ms(1000);
+	OCR1B = 1000;
+	
+}
+
+
+	void stop()
+	{
+		OCR1A = 1500;
+		OCR1B = 1000;
+	}
+
+	int main()
+	{
+		init();
+		while(1)
+		{
+			checkForInput();
+			if(checkIfEmpty(floors))
+			{
+				floordifference = checkUpDown();
+				if(floordifference == 0)
+				{
+					stop();
+				}
+				if(upDown)
+				{
+					up(floordifference, currentfloor);
+					//floors[currentfloor-1] = false;
+				}
+				else
+				{
+					down(floordifference, currentfloor);
+					//floors[currentfloor-1] = false;
+				}
+			}
+			else
+			{
+				stop();
+			}
+		}
+	}
+
+
+
+	void init()
+	{
+		//set port A as input for keypad
+		//DDRA = 0x00;
+		//setting port B as outputs for LEDs
+		//DDRB = 0xFF;
+		//initialize port B
+		//PORTB = 0b00000000;
+		
+		DDRD = 0b00110000;        // set pin D.5 for output (OC1A)
+		
+		//setting up timer
+		TCCR0 = 0x02; //clock prescale = 8
+		TIMSK = 0x01; //unmask overflow interrupt
+		TCNT0 = 131; //initialize timer to 131
+		
+		// WGM11:WGM10   = 10: with WGM13-WGM12 to select timer mode 1110
+		//                     Fast PWM, timer 1 runs from 0 to ICR1
+		// COM1A1:COM1A0 = 10: clear OC1A when compare match, set OC1A when 0
+		TCCR1A = 0b10100010; // compare match occurs timer = OCR1A
+		TCCR1B = 0b00011001; // WGM13:WGM12=11; CS12:CS0=001: internal clock 1MHz, no prescaler
+		ICR1 = 21500;
+		OCR1A = 1500;
+		OCR1B = 1000;
+		// enable interrupts
+		sei();
+	}
+
+	void checkForInput()
+	{
+		int row = calculate_row();
+		int column = calculate_column();
+		int inputfloor = row|column;
+		int floorpressed = 0;
+		if(inputfloor == 0xFF)
+		{
+			return;
+		}
+		
+		else
+		{
+			if(testforzeros(inputfloor)==2)
+			{
+				floorpressed = checkFloor(inputfloor);
+				if(floorpressed == -1)
+				{
+					return;
+				}
+				else
+				{
+					floors[floorpressed-1] = true;
+				}
+			}
+		}
+		
+	}
+		int calculate_row()
+		{
+			DDRA = 0x0F;         //set four right-most bits to output, four left-most bits to input
+			PORTA = 0x0F;        //setting all 1 to input bits, to determine row
+			int row = PINA;      //read row value
+			row &= 0xF0;         //mask lower four bits, to prevent error
+			return row;          //return row value
+		}
+
+		//Calculate column function
+		int calculate_column()
+		{
+			DDRA = 0xF0;         //set four right-most bits to input, four left-most bits to output
+			PORTA = 0xF0;        //setting all 1 to input bits, to determine column
+			int column = PINA;   //read column value
+			column &= 0x0F;      //mask upper four bits, to prevent error
+			return column;       //return column value
+		}
+
+		//Checks if more than 1 button is being pressed.
+		int testforzeros(int hold)
+		{
+			int numberofzeros = 0;
+			int test = hold;
+			for (int count = 0; count <= 7; count++)
+			{
+				if(((test>>count) & 0x01)==0)
+				{
+					numberofzeros++;
+				}
+			}
+			return numberofzeros;
+		}
+
+		int checkFloor(int hold)
+		{
+			switch(hold)
+			{
+				case 0x77:          // 1
+				return 1;
+				
+				case 0x7B:          // 2
+				return 2;
+				
+				case 0x7D:          // 3
+				return 3;
+				
+				case 0xB7:          // 4
+				return 4;
+
+				case 0xBB:          // 5
+				return 5;
+				
+				case 0xBD:          // 6
+				return 6;
+
+				case 0xD7:          // 7
+				return 7;
+				
+				case 0xDB:          // 8
+				return 8;
+				
+				default:
+				return -1;
+			}
+		}
+
+		
