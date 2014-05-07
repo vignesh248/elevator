@@ -274,3 +274,22 @@ bool checkMovement(bool floorcheck[])
 
     return false;
 }
+
+void displayfloor(short int floor)
+{
+    switch(floor)
+    {
+        case 0: PORTB = 0b11111110;
+                break;
+        case 1: PORTB = 0b11111101;
+                break;
+        case 2: PORTB = 0b11111011;
+                break;
+        case 3: PORTB = 0b11110111;
+                break;
+        case 4: PORTB = 0b11101111;
+                break;
+        default: PORTB = 0b11111111;
+                break;
+     }
+}
