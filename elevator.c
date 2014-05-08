@@ -239,17 +239,17 @@ void displayfloor()
 {
     switch(currentfloor)
     {
-        case 0: PORTB = 0b11111110;
+        case 0: PORTB = 0xDD;
         break;
-        case 1: PORTB = 0b11111101;
+        case 1: PORTB = 0xA4;
         break;
-        case 2: PORTB = 0b11111011;
+        case 2: PORTB = 0x94;
         break;
-        case 3: PORTB = 0b11110111;
+        case 3: PORTB = 0xD1;
         break;
-        case 4: PORTB = 0b11101111;
+        case 4: PORTB = 0x92;
         break;
-        default: PORTB = 0b11111111;
+        default: PORTB = 0xFF;
         break;
     }
     
