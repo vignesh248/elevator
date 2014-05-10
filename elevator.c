@@ -24,7 +24,7 @@ void displayfloor();
 
 //Function Variables
 int direction = 0;//no direction, 1 = up, 2 = down
-int floors[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0}; // 0 = no call, 1 = call
+int floors[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; // 0 = no call, 1 = call
 int currentfloor = 0;
 int floordifference = 0;
 
@@ -32,7 +32,7 @@ int floordifference = 0;
 //Functions
 bool checkIfEmpty()
 {
-    for(int i = 0; i <= 8; i++)
+    for(int i = 0; i <= 9; i++)
     {
         if(floors[i] == 1)
         {
@@ -45,7 +45,7 @@ bool checkIfEmpty()
 int checkUpDown()
 {
     checkForInput();
-    for(int i = currentfloor; i<9;i++)
+    for(int i = currentfloor; i<10;i++)
     {
         if(floors[i] == 1)
         {
@@ -92,12 +92,12 @@ void up()
 {
     //
     //displayfloor(currentfloor);
-    for (int i = 1; i<=(floordifference*10)+1; i++)
+    for (int i = 1; i<=(floordifference*20)+1; i++)
     {
         OCR1A = 1700;
         OCR1B = 1000;
         _delay_ms(100);
-        if((i%10) == 0) currentfloor++;
+        if((i%20) == 0) currentfloor++;
         displayfloor();
         checkForInput();
     }
@@ -110,12 +110,12 @@ void up()
 void down()
 {
     checkForInput();
-    for (int i = 1; i<=(floordifference*10)+1; i++)
+    for (int i = 1; i<=(floordifference*20)+1; i++)
     {
         OCR1A = 1300;
         OCR1B = 1000;
         _delay_ms(100);
-        if((i%10) == 0) currentfloor--;
+        if((i%20) == 0) currentfloor--;
         displayfloor();
         checkForInput();
     }
@@ -227,22 +227,26 @@ void checkForInput()
         floors[4] = 1;
         break;
         
-		case 0xBD: 			// 6
-		floors[5] = 1;
-		break;
+        case 0xBD:          // 6
+        floors[5] = 1;
+        break;
 
-		case 0xD7: 			// 7
-		floors[6] = 1;
-		break;
+        case 0xD7:          // 7
+        floors[6] = 1;
+        break;
 
-		case 0xDB: 			// 8		
-		floors[7] = 1;
-		break;
+        case 0xDB:          // 8
+        floors[7] = 1;
+        break;
 
 
-		case 0xDD: 			// 9
-		floors[8] = 1;
-		break;
+        case 0xDD:          // 9
+        floors[8] = 1;
+        break;
+        
+        case 0x7E:
+        floors[9] = 1;
+        break;
 
         default:
         break;      // nothing was pressed or invalid.
@@ -273,6 +277,8 @@ void displayfloor()
         case 7: PORTB = 0x80;
         break;
         case 8: PORTB = 0x90;
+        break;
+        case 9: PORTB = 0xC0;
         break;
         default: PORTB = 0xFF;
         break;
